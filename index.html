@@ -179,8 +179,8 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 .sun-emoji{width:28px;height:28px;display:flex;align-items:center;justify-content:center}
 .sun-tl{font-size:9px;color:var(--muted-2);text-transform:uppercase;letter-spacing:1px}
 .sun-tv{font-size:16px;font-weight:700}
-.sun-arc-container{flex:1;height:70px;margin:0 8px;min-width:0;overflow:hidden}
-.sun-arc-svg{width:100%;height:100%;display:block}
+.sun-arc-container{flex:1;height:80px;margin:0 10px;min-width:0;position:relative}
+.sun-arc-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .daylight-info{display:flex;justify-content:space-between;margin-top:10px;font-size:12px;color:var(--muted)}
 .section-title{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--muted-2);font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:6px}
 
@@ -270,14 +270,11 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 /* ── RESPONSIVE ── */
 @media(max-width:900px){.welcome-cities-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:768px){
-  .sun-card{padding:16px 14px}
-  .sun-timeline{padding:0}
-  .sun-time-block{min-width:52px}
-  .sun-tv{font-size:14px;font-weight:700}
+  .sun-card{padding:18px 14px}
+  .sun-arc-container{height:72px;margin:0 6px}
+  .sun-time-block{min-width:50px}
+  .sun-tv{font-size:14px}
   .sun-tl{font-size:8px}
-  .sun-emoji{width:22px;height:22px}
-  .sun-arc-container{height:62px;margin:0 4px}
-  .daylight-info{font-size:11px}
   header{padding:12px 18px}
   .search-section{padding:32px 18px 18px}
   .main-content{padding:0 18px 60px}
@@ -397,7 +394,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
             <div class="sun-tv" id="sunriseEl">—</div>
           </div>
           <div class="sun-arc-container">
-            <svg class="sun-arc-svg" id="sunArcSvg" viewBox="0 0 300 82" preserveAspectRatio="xMidYMax meet"></svg>
+            <svg class="sun-arc-svg" id="sunArcSvg" viewBox="0 0 300 100" preserveAspectRatio="none"></svg>
           </div>
           <div class="sun-time-block">
             <div class="sun-emoji"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ff7c4d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 10V2"/><path d="m4.93 10.93 1.41 1.41"/><path d="M2 18h2"/><path d="M20 18h2"/><path d="m19.07 10.93-1.41 1.41"/><path d="M22 22H2"/><path d="m16 6-4 4-4-4"/><path d="M16 18a4 4 0 0 0-8 0"/></svg></div>
@@ -802,50 +799,62 @@ function spawnStars(){
 }
 
 function drawSunArc(progress){
-  const svg=document.getElementById('sunArcSvg');
-  // viewBox: 0 0 300 82  — base at y=76, apex at y≈14
-  // x = 150 + 140*cos(a),  y = 76 - 62*sin(a)
-  // a=PI → left (sunrise), a=0 → right (sunset)
-  const BASE=76, cx=150, rx=140, ry=62;
-  const p=Math.max(0,Math.min(1,progress));
-  const ang=Math.PI*(1-p);
-  const sx=(cx+rx*Math.cos(ang)).toFixed(2);
-  const sy=(BASE-ry*Math.sin(ang)).toFixed(2);
-  svg.innerHTML=`
+  const svg = document.getElementById('sunArcSvg');
+  const container = svg.parentElement;
+  // Lire la vraie largeur du conteneur pour adapter le viewBox
+  const W = Math.max(container.clientWidth || 200, 80);
+  const H = Math.max(container.clientHeight || 80, 60);
+  // Coordonnées : arc posé sur la ligne de base y=H-4
+  // rayon horizontal = moitié largeur - marge, rayon vertical = hauteur - marge top
+  const PAD = 10;
+  const BASE = H - 4;          // ligne de sol
+  const cx   = W / 2;
+  const rx   = W / 2 - PAD;
+  const ry   = H - PAD - 8;    // hauteur de l'arc (laisse 8px en haut pour le soleil)
+  const p = Math.max(0, Math.min(1, progress));
+  // a=PI (p=0, lever/gauche) → a=0 (p=1, coucher/droite)
+  const ang = Math.PI * (1 - p);
+  const sx = (cx + rx * Math.cos(ang)).toFixed(1);
+  const sy = (BASE - ry * Math.sin(ang)).toFixed(1);   // SVG Y inversé → soustraction
+  // Mettre à jour le viewBox pour coller à la vraie taille
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = `
     <defs>
       <linearGradient id="ag" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stop-color="#4dd9ff" stop-opacity=".5"/>
-        <stop offset="40%" stop-color="#ffe066" stop-opacity=".9"/>
-        <stop offset="100%" stop-color="#ff7c4d" stop-opacity=".6"/>
+        <stop offset="0%"   stop-color="#4dd9ff" stop-opacity=".5"/>
+        <stop offset="45%"  stop-color="#ffe066" stop-opacity=".95"/>
+        <stop offset="100%" stop-color="#ff7c4d" stop-opacity=".65"/>
       </linearGradient>
       <filter id="glow2" x="-80%" y="-80%" width="260%" height="260%">
-        <feGaussianBlur stdDeviation="5" result="b"/>
+        <feGaussianBlur stdDeviation="4" result="b"/>
         <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
       <filter id="glowsm" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="2.5" result="b"/>
+        <feGaussianBlur stdDeviation="2" result="b"/>
         <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
       </filter>
     </defs>
     ${Array.from({length:13},(_,i)=>{
-      const a=Math.PI*(1-i/12);
-      const x1=(cx+rx*Math.cos(a)).toFixed(1),      y1=(BASE-ry*Math.sin(a)).toFixed(1);
-      const x2=(cx+(rx-7)*Math.cos(a)).toFixed(1),  y2=(BASE-(ry-7)*Math.sin(a)).toFixed(1);
+      const a = Math.PI*(1-i/12);
+      const x1=(cx+rx*Math.cos(a)).toFixed(1),     y1=(BASE-ry*Math.sin(a)).toFixed(1);
+      const x2=(cx+(rx-5)*Math.cos(a)).toFixed(1), y2=(BASE-(ry-5)*Math.sin(a)).toFixed(1);
       return i%3===0
-        ?'<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="rgba(255,255,255,.2)" stroke-width="1.5" stroke-linecap="round"/>'
-        :'<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="rgba(255,255,255,.08)" stroke-width="1" stroke-linecap="round"/>';
+        ? '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="rgba(255,255,255,.2)" stroke-width="1.5" stroke-linecap="round"/>'
+        : '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="rgba(255,255,255,.08)" stroke-width="1" stroke-linecap="round"/>';
     }).join('')}
-    <line x1="8" y1="${BASE}" x2="292" y2="${BASE}" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-    <path d="M ${cx-rx},${BASE} A ${rx},${ry} 0 0 1 ${cx+rx},${BASE}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="2" stroke-dasharray="4 3"/>
-    ${p>0?`<path d="M ${cx-rx},${BASE} A ${rx},${ry} 0 0 1 ${sx},${sy}" fill="none" stroke="url(#ag)" stroke-width="3.5" stroke-linecap="round" filter="url(#glowsm)"/>`:''}
-    ${p>0&&p<1?`
-      <circle cx="${sx}" cy="${sy}" r="20" fill="rgba(255,230,100,0.06)"/>
-      <circle cx="${sx}" cy="${sy}" r="12" fill="rgba(255,230,100,0.12)"/>
-      <circle cx="${sx}" cy="${sy}" r="7" fill="#ffe566" filter="url(#glow2)"/>
-      <circle cx="${sx}" cy="${sy}" r="4" fill="white"/>
-    `:''}
-    ${p<=0?`<circle cx="${cx-rx}" cy="${BASE}" r="4" fill="rgba(150,180,255,0.4)"/>`:''}
-    ${p>=1?`<circle cx="${cx+rx}" cy="${BASE}" r="4" fill="rgba(150,180,255,0.4)"/>`:''}
+    <line x1="${PAD}" y1="${BASE}" x2="${W-PAD}" y2="${BASE}" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <path d="M ${cx-rx},${BASE} A ${rx},${ry} 0 0 1 ${cx+rx},${BASE}"
+          fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="2" stroke-dasharray="4 3"/>
+    ${p>0 ? `<path d="M ${cx-rx},${BASE} A ${rx},${ry} 0 0 1 ${sx},${sy}"
+              fill="none" stroke="url(#ag)" stroke-width="3" stroke-linecap="round" filter="url(#glowsm)"/>` : ''}
+    ${p>0&&p<1 ? `
+      <circle cx="${sx}" cy="${sy}" r="16" fill="rgba(255,230,100,0.06)"/>
+      <circle cx="${sx}" cy="${sy}" r="9"  fill="rgba(255,230,100,0.13)"/>
+      <circle cx="${sx}" cy="${sy}" r="5.5" fill="#ffe566" filter="url(#glow2)"/>
+      <circle cx="${sx}" cy="${sy}" r="2.5" fill="white"/>
+    ` : ''}
+    ${p<=0 ? `<circle cx="${cx-rx}" cy="${BASE}" r="3.5" fill="rgba(150,180,255,0.4)"/>` : ''}
+    ${p>=1 ? `<circle cx="${cx+rx}" cy="${BASE}" r="3.5" fill="rgba(150,180,255,0.4)"/>` : ''}
   `;
 }
 
@@ -1099,7 +1108,8 @@ function renderWeather(data){
   document.getElementById('sunriseEl').textContent=`${fmt2(sr.getHours())}:${fmt2(sr.getMinutes())}`;
   document.getElementById('sunsetEl').textContent=`${fmt2(ss.getHours())}:${fmt2(ss.getMinutes())}`;
   const prog=Math.max(0,Math.min(1,(now-sr)/(ss-sr)));
-  drawSunArc(prog);
+  // Attendre que le layout soit calculé avant de dessiner (important sur mobile)
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ drawSunArc(prog); }); });
   const dur=ss-sr,dh=Math.floor(dur/3600000),dm=Math.floor((dur%3600000)/60000);
   document.getElementById('daylightDuration').textContent=`Durée : ${dh}h${fmt2(dm)}min`;
   document.getElementById('sunProgress').textContent=isNight?'Nuit':`${Math.round(prog*100)}% de la journée`;
