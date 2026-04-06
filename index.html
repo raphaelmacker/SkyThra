@@ -241,6 +241,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 
 .bottom-note{text-align:center;padding:20px;font-size:11px;color:var(--muted-2);border-top:1px solid var(--border);margin-top:20px}
 
+/* ── SCROLL OVERLAY (effet météo iOS) ── */
+.scroll-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 0%,rgba(11,15,26,0) 30%,rgba(11,15,26,0.55) 70%,rgba(11,15,26,0.85) 100%);opacity:0;transition:opacity .3s ease;pointer-events:none;will-change:opacity}
+
 /* ── ICON SIZES ── */
 .weather-icon-big svg{width:80px;height:80px}
 .hour-icon svg{width:32px;height:32px}
@@ -300,6 +303,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
   <div class="lightning-el" id="lightningEl"></div>
   <div class="sun-obj" id="sunObj"></div>
   <div class="moon-obj" id="moonObj"></div>
+  <div class="scroll-overlay" id="scrollOverlay"></div>
 </div>
 
 <div class="page">
@@ -1427,6 +1431,22 @@ setInterval(updateFreshnessBadge,60000);
 setScene('', null, null);
 loadWelcomeGrid();
 startAutoRefresh();
+
+// ═══ SCROLL OVERLAY — effet météo iOS ═══
+(function(){
+  const overlay = document.getElementById('scrollOverlay');
+  let ticking = false;
+  function updateOverlay(){
+    const scrollY = window.scrollY || window.pageYOffset;
+    // Commence à apparaître dès 60px, atteint max à 350px
+    const progress = Math.min(Math.max((scrollY - 60) / 290, 0), 1);
+    overlay.style.opacity = progress;
+    ticking = false;
+  }
+  window.addEventListener('scroll', function(){
+    if(!ticking){ requestAnimationFrame(updateOverlay); ticking=true; }
+  }, {passive:true});
+})();
 </script>
 </body>
 </html>
